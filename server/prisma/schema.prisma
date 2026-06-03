@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role
+  createdAt     DateTime       @default(now())
+
+  appointments  Appointment[]
+}
+
+model Queue {
+  id                String         @id @default(cuid())
+  name              String
+  currentToken      Int            @default(0)
+  estimatedWait     Int            @default(0)
+  averageServiceTime Int           @default(5)
+  createdAt         DateTime       @default(now())
+
+  appointments      Appointment[]
+}
+
+model Appointment {
+  id            String      @id @default(cuid())
+  tokenNumber   Int
+  status        Status      @default(PENDING)
+  createdAt     DateTime    @default(now())
+
+  userId        String
+  queueId       String
+
+  user          User        @relation(fields: [userId], references: [id])
+  queue         Queue       @relation(fields: [queueId], references: [id])
+}
+
+enum Role {
+  CUSTOMER
+  BUSINESS
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  COMPLETED
+}

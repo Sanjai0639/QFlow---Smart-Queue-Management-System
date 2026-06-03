@@ -1,7 +1,7 @@
 export default function CustomersPage() {
 
   return (
-    <main className="min-h-screen bg-black p-10 pl-80 text-white">
+    <main className="min-h-screen bg-black px-12 py-10 ml-64 text-white">
 
       <h1 className="text-6xl font-bold">
         Customers

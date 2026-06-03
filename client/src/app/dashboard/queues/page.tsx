@@ -2,119 +2,83 @@
 
 import { useEffect, useState } from "react";
 
-import api from "@/lib/axios";
-
-import { io } from "socket.io-client";
-
-import QRCode from "react-qr-code";
-
-const socket = io("http://localhost:5000");
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface Queue {
   id: string;
   name: string;
   currentToken: number;
-  estimatedWait: number;
 }
 
 export default function QueuesPage() {
 
-  const [queueName, setQueueName] = useState("");
-
   const [queues, setQueues] = useState<Queue[]>([]);
-
-  const [joinedToken, setJoinedToken] =
-    useState<number | null>(null);
-
-  const [selectedQR, setSelectedQR] =
-    useState<string | null>(null);
+  const [queueName, setQueueName] = useState("");
 
   // FETCH QUEUES
   const fetchQueues = async () => {
+
     try {
 
-      const response = await api.get("/queue/all");
+      const response = await fetch(
+        `${API_URL}/queue`
+      );
 
-      setQueues(response.data);
+      const data = await response.json();
+
+      setQueues(data);
 
     } catch (error) {
+
       console.log(error);
+
     }
+
   };
 
   // CREATE QUEUE
   const createQueue = async () => {
+
+    if (!queueName) return;
+
     try {
 
       const token = localStorage.getItem("token");
 
-      await api.post(
-        "/queue/create",
-        {
-          name: queueName,
+      await fetch(`${API_URL}/queue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+        body: JSON.stringify({
+          name: queueName,
+        }),
+      });
 
       setQueueName("");
 
       fetchQueues();
 
     } catch (error) {
+
       console.log(error);
 
-      alert("Failed to create queue");
     }
+
   };
 
   // JOIN QUEUE
   const joinQueue = async (queueId: string) => {
+
     try {
 
       const token = localStorage.getItem("token");
 
-      const response = await api.post(
-        `/queue/join/${queueId}`,
-        {},
+      await fetch(
+        `${API_URL}/queue/${queueId}/join`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setJoinedToken(
-        response.data.tokenNumber
-      );
-
-      alert(
-        `Joined Queue Successfully.
-Token: ${response.data.tokenNumber}
-Estimated Wait: ${response.data.estimatedWait} mins`
-      );
-
-      fetchQueues();
-
-    } catch (error) {
-      console.log(error);
-
-      alert("Failed to join queue");
-    }
-  };
-
-  // DELETE QUEUE
-  const deleteQueue = async (queueId: string) => {
-    try {
-
-      const token = localStorage.getItem("token");
-
-      await api.delete(
-        `/queue/delete/${queueId}`,
-        {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -124,22 +88,24 @@ Estimated Wait: ${response.data.estimatedWait} mins`
       fetchQueues();
 
     } catch (error) {
+
       console.log(error);
 
-      alert("Failed to delete queue");
     }
+
   };
 
   // RESET QUEUE
   const resetQueue = async (queueId: string) => {
+
     try {
 
       const token = localStorage.getItem("token");
 
-      await api.patch(
-        `/queue/reset/${queueId}`,
-        {},
+      await fetch(
+        `${API_URL}/queue/${queueId}/reset`,
         {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -149,10 +115,38 @@ Estimated Wait: ${response.data.estimatedWait} mins`
       fetchQueues();
 
     } catch (error) {
+
       console.log(error);
 
-      alert("Failed to reset queue");
     }
+
+  };
+
+  // DELETE QUEUE
+  const deleteQueue = async (queueId: string) => {
+
+    try {
+
+      const token = localStorage.getItem("token");
+
+      await fetch(
+        `${API_URL}/queue/${queueId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      fetchQueues();
+
+    } catch (error) {
+
+      console.log(error);
+
+    }
+
   };
 
   useEffect(() => {
@@ -162,20 +156,13 @@ Estimated Wait: ${response.data.estimatedWait} mins`
     };
     load();
 
-    socket.on("queueUpdated", () => {
-      load();
-    });
-
-    return () => {
-      socket.off("queueUpdated");
-    };
-
   }, []);
 
   return (
-    <main className="min-h-screen bg-black p-10 text-white">
 
-      <h1 className="text-5xl font-bold">
+    <main className="min-h-screen bg-black px-12 py-10 ml-64 text-white">
+
+      <h1 className="text-6xl font-bold">
         Queue Management
       </h1>
 
@@ -184,9 +171,9 @@ Estimated Wait: ${response.data.estimatedWait} mins`
       </p>
 
       {/* CREATE QUEUE */}
-      <div className="mt-10 max-w-xl rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-6">
+      <div className="mt-10 rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-8 max-w-2xl">
 
-        <h2 className="mb-6 text-2xl font-semibold">
+        <h2 className="text-3xl font-bold">
           Create Queue
         </h2>
 
@@ -194,137 +181,66 @@ Estimated Wait: ${response.data.estimatedWait} mins`
           type="text"
           placeholder="Queue name"
           value={queueName}
-          onChange={(e) =>
-            setQueueName(e.target.value)
-          }
-          className="w-full rounded-xl border border-cyan-500/20 bg-black/40 px-4 py-3 outline-none focus:border-cyan-400"
+          onChange={(e) => setQueueName(e.target.value)}
+          className="mt-6 w-full rounded-xl border border-cyan-500/20 bg-black p-4 outline-none"
         />
 
         <button
           onClick={createQueue}
-          className="mt-5 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-black transition hover:scale-105"
+          className="mt-6 rounded-xl bg-cyan-500 px-8 py-4 font-bold text-black"
         >
           Create Queue
         </button>
 
       </div>
 
-      {/* TOKEN CARD */}
-      {joinedToken && (
-
-        <div className="mt-10 max-w-md rounded-3xl border border-green-500/20 bg-green-500/10 p-6">
-
-          <p className="text-gray-300">
-            Your Queue Token
-          </p>
-
-          <h2 className="mt-3 text-7xl font-bold text-green-400">
-            {joinedToken}
-          </h2>
-
-        </div>
-
-      )}
-
-      {/* QR MODAL */}
-      {selectedQR && (
-
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-
-          <div className="rounded-3xl bg-white p-10 text-black">
-
-            <h2 className="mb-6 text-center text-2xl font-bold">
-              Scan to Join Queue
-            </h2>
-
-            <QRCode
-              value={selectedQR}
-              size={220}
-            />
-
-            <button
-              onClick={() => setSelectedQR(null)}
-              className="mt-8 w-full rounded-xl bg-black py-3 text-white"
-            >
-              Close
-            </button>
-
-          </div>
-
-        </div>
-
-      )}
-
-      {/* QUEUE LIST */}
+      {/* QUEUES */}
       <div className="mt-10 grid gap-6 md:grid-cols-2">
 
         {queues.map((queue) => (
 
           <div
             key={queue.id}
-            className="rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-6"
+            className="rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-8"
           >
 
-            <h2 className="text-2xl font-bold text-cyan-400">
+            <h2 className="text-3xl font-bold text-cyan-400">
               {queue.name}
             </h2>
 
-            <div className="mt-6 space-y-4">
+            <p className="mt-6 text-gray-400">
+              Current Token
+            </p>
 
-              <div>
-                <p className="text-gray-400">
-                  Current Token
-                </p>
+            <h3 className="mt-2 text-5xl font-bold">
+              {queue.currentToken}
+            </h3>
 
-                <h3 className="text-5xl font-bold">
-                  {queue.currentToken}
-                </h3>
-              </div>
+            <p className="mt-6 text-yellow-400 text-2xl font-bold">
+              {queue.currentToken * 5} mins
+            </p>
 
-              <div>
-                <p className="text-gray-400">
-                  Estimated Wait
-                </p>
-
-                <h3 className="text-3xl font-bold text-yellow-400">
-                  {queue.estimatedWait} mins
-                </h3>
-              </div>
-
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap gap-4">
 
               <button
                 onClick={() => joinQueue(queue.id)}
-                className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-black transition hover:scale-105"
+                className="rounded-xl bg-cyan-500 px-6 py-3 font-bold text-black"
               >
                 Join Queue
               </button>
 
               <button
                 onClick={() => resetQueue(queue.id)}
-                className="rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-black transition hover:scale-105"
+                className="rounded-xl bg-yellow-500 px-6 py-3 font-bold text-black"
               >
                 Reset
               </button>
 
               <button
                 onClick={() => deleteQueue(queue.id)}
-                className="rounded-xl bg-red-500 px-5 py-3 font-semibold text-white transition hover:scale-105"
+                className="rounded-xl bg-red-500 px-6 py-3 font-bold text-white"
               >
                 Delete
-              </button>
-
-              <button
-                onClick={() =>
-                  setSelectedQR(
-                    `http://localhost:3000/dashboard/queues`
-                  )
-                }
-                className="rounded-xl bg-white px-5 py-3 font-semibold text-black transition hover:scale-105"
-              >
-                QR Code
               </button>
 
             </div>
@@ -336,5 +252,7 @@ Estimated Wait: ${response.data.estimatedWait} mins`
       </div>
 
     </main>
+
   );
+
 }

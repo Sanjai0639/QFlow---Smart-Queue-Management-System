@@ -1,15 +1,22 @@
 services:
 
-  frontend:
-    build: ./client
+  # Local PostgreSQL database for development
+  db:
+    image: postgres:16-alpine
     restart: always
+    environment:
+      POSTGRES_USER: qflow_user
+      POSTGRES_PASSWORD: qflow_password
+      POSTGRES_DB: qflow_db
     ports:
-      - "3000:3000"
+      - "5432:5432"
     volumes:
-      - ./client:/app
-      - /app/node_modules
-    depends_on:
-      - backend
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qflow_user -d qflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./server
@@ -21,3 +28,25 @@ services:
       - /app/node_modules
     env_file:
       - ./server/.env
+    environment:
+      - DATABASE_URL=postgresql://qflow_user:qflow_password@db:5432/qflow_db
+    command: sh -c "npx prisma db push && npm run dev"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./client
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

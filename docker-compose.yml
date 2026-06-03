@@ -1,8 +1,8 @@
-version: "3.9"
-
 services:
+
   frontend:
     build: ./client
+    restart: always
     ports:
       - "3000:3000"
     volumes:
@@ -13,6 +13,7 @@ services:
 
   backend:
     build: ./server
+    restart: always
     ports:
       - "5000:5000"
     volumes:

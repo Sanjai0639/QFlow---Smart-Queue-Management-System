@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:5000";
 
 interface Queue {
   id: string;
   name: string;
   currentToken: number;
+  estimatedWait?: number;
 }
 
 export default function QueuesPage() {
@@ -15,25 +18,29 @@ export default function QueuesPage() {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [queueName, setQueueName] = useState("");
 
-  // FETCH QUEUES
-  const fetchQueues = async () => {
+  // FETCH QUEUES DATA
+  const getQueuesData = async () => {
 
     try {
 
       const response = await fetch(
-        `${API_URL}/queue`
+        `${API_URL}/queue/all`
       );
 
-      const data = await response.json();
-
-      setQueues(data);
+      return await response.json();
 
     } catch (error) {
 
       console.log(error);
+      return [];
 
     }
 
+  };
+
+  const fetchQueues = async () => {
+    const data = await getQueuesData();
+    setQueues(data);
   };
 
   // CREATE QUEUE
@@ -45,7 +52,7 @@ export default function QueuesPage() {
 
       const token = localStorage.getItem("token");
 
-      await fetch(`${API_URL}/queue`, {
+      await fetch(`${API_URL}/queue/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,7 +83,7 @@ export default function QueuesPage() {
       const token = localStorage.getItem("token");
 
       await fetch(
-        `${API_URL}/queue/${queueId}/join`,
+        `${API_URL}/queue/join/${queueId}`,
         {
           method: "POST",
           headers: {
@@ -103,9 +110,9 @@ export default function QueuesPage() {
       const token = localStorage.getItem("token");
 
       await fetch(
-        `${API_URL}/queue/${queueId}/reset`,
+        `${API_URL}/queue/reset/${queueId}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -130,7 +137,7 @@ export default function QueuesPage() {
       const token = localStorage.getItem("token");
 
       await fetch(
-        `${API_URL}/queue/${queueId}`,
+        `${API_URL}/queue/delete/${queueId}`,
         {
           method: "DELETE",
           headers: {
@@ -151,10 +158,17 @@ export default function QueuesPage() {
 
   useEffect(() => {
 
-    const load = async () => {
-      await fetchQueues();
+    let active = true;
+
+    getQueuesData().then((data) => {
+      if (active) {
+        setQueues(data);
+      }
+    });
+
+    return () => {
+      active = false;
     };
-    load();
 
   }, []);
 
@@ -217,7 +231,7 @@ export default function QueuesPage() {
             </h3>
 
             <p className="mt-6 text-yellow-400 text-2xl font-bold">
-              {queue.currentToken * 5} mins
+              ETA: {queue.currentToken * 5} mins
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">

@@ -18,8 +18,8 @@ export default function QueuesPage() {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [queueName, setQueueName] = useState("");
 
-  // FETCH QUEUES DATA
-  const getQueuesData = async () => {
+  // FETCH QUEUES
+  const fetchQueues = async () => {
 
     try {
 
@@ -27,20 +27,16 @@ export default function QueuesPage() {
         `${API_URL}/queue/all`
       );
 
-      return await response.json();
+      const data = await response.json();
+
+      setQueues(data);
 
     } catch (error) {
 
       console.log(error);
-      return [];
 
     }
 
-  };
-
-  const fetchQueues = async () => {
-    const data = await getQueuesData();
-    setQueues(data);
   };
 
   // CREATE QUEUE
@@ -160,11 +156,14 @@ export default function QueuesPage() {
 
     let active = true;
 
-    getQueuesData().then((data) => {
-      if (active) {
-        setQueues(data);
-      }
-    });
+    fetch(`${API_URL}/queue/all`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) {
+          setQueues(data);
+        }
+      })
+      .catch((error) => console.log(error));
 
     return () => {
       active = false;
@@ -196,12 +195,12 @@ export default function QueuesPage() {
           placeholder="Queue name"
           value={queueName}
           onChange={(e) => setQueueName(e.target.value)}
-          className="mt-6 w-full rounded-xl border border-cyan-500/20 bg-black p-4 outline-none"
+          className="mt-6 w-full rounded-xl border border-cyan-500/20 bg-black p-4 outline-none transition-all duration-300 focus:border-cyan-400"
         />
 
         <button
           onClick={createQueue}
-          className="mt-6 rounded-xl bg-cyan-500 px-8 py-4 font-bold text-black"
+          className="mt-6 rounded-xl bg-cyan-500 px-8 py-4 font-bold text-black transition-all duration-300 hover:scale-105 hover:bg-cyan-400 active:scale-95"
         >
           Create Queue
         </button>
@@ -215,7 +214,7 @@ export default function QueuesPage() {
 
           <div
             key={queue.id}
-            className="rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-8"
+            className="rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-8 transition-all duration-300 hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)]"
           >
 
             <h2 className="text-3xl font-bold text-cyan-400">
@@ -236,23 +235,26 @@ export default function QueuesPage() {
 
             <div className="mt-8 flex flex-wrap gap-4">
 
+              {/* JOIN */}
               <button
                 onClick={() => joinQueue(queue.id)}
-                className="rounded-xl bg-cyan-500 px-6 py-3 font-bold text-black"
+                className="rounded-xl bg-cyan-500 px-6 py-3 font-bold text-black transition-all duration-300 hover:scale-105 hover:bg-cyan-400 active:scale-95"
               >
                 Join Queue
               </button>
 
+              {/* RESET */}
               <button
                 onClick={() => resetQueue(queue.id)}
-                className="rounded-xl bg-yellow-500 px-6 py-3 font-bold text-black"
+                className="rounded-xl bg-yellow-500 px-6 py-3 font-bold text-black transition-all duration-300 hover:scale-105 hover:bg-yellow-400 active:scale-95"
               >
                 Reset
               </button>
 
+              {/* DELETE */}
               <button
                 onClick={() => deleteQueue(queue.id)}
-                className="rounded-xl bg-red-500 px-6 py-3 font-bold text-white"
+                className="rounded-xl bg-red-500 px-6 py-3 font-bold text-white transition-all duration-300 hover:scale-105 hover:bg-red-400 active:scale-95"
               >
                 Delete
               </button>

@@ -158,7 +158,17 @@ router.post(
 
       const queueId = req.params.queueId as string;
 
-      const userId = (req as any).user.userId;
+    const userId = (req as any).user.userId;
+
+console.log("USER ID FROM TOKEN:", userId);
+
+const userExists = await prisma.user.findUnique({
+  where: {
+    id: userId,
+  },
+});
+
+console.log("USER EXISTS:", userExists);
 
       const queue = await prisma.queue.findUnique({
         where: {
